@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: linkding
+  namespace: linkding
+  labels:
+    app: linkding
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: linkding
+  template:
+    metadata:
+      labels:
+        app: linkding
+    spec:
+      containers:
+        - name: linkding
+          image: sissbruecker/linkding:1.46.2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 9090
+          env:
+            - name: LD_SUPERUSER_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: linkding-admin
+                  key: username
+            - name: LD_SUPERUSER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: linkding-admin
+                  key: password
+          volumeMounts:
+            - name: data
+              mountPath: /etc/linkding/data
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            failureThreshold: 30
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: linkding-data
