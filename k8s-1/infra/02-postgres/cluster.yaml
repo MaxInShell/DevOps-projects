@@ -1,0 +1,51 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: pg-cluster
+  namespace: shortener
+spec:
+  instances: 2
+  imageName: ghcr.io/cloudnative-pg/postgresql:16.4
+
+  primaryUpdateStrategy: unsupervised
+
+  storage:
+    size: 2Gi
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+  postgresql:
+    parameters:
+      max_connections: "100"
+      shared_buffers: 128MB
+
+  monitoring:
+    enablePodMonitor: true
+
+  bootstrap:
+    initdb:
+      database: shortener
+      owner: shortener
+      secret:
+        name: pg-app-secret
+      postInitApplicationSQL:
+        - |
+          CREATE TABLE IF NOT EXISTS links (
+            code       TEXT PRIMARY KEY,
+            url        TEXT NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+          );
+        - |
+          CREATE TABLE IF NOT EXISTS click_stats (
+            code   TEXT NOT NULL,
+            day    DATE NOT NULL,
+            clicks BIGINT NOT NULL DEFAULT 0,
+            PRIMARY KEY (code, day)
+          );
+        - |
+          CREATE INDEX IF NOT EXISTS click_stats_day_idx ON click_stats (day DESC);

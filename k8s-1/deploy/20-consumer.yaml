@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clicks-consumer
+  namespace: shortener
+  labels:
+    app: clicks-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clicks-consumer
+  template:
+    metadata:
+      labels:
+        app: clicks-consumer
+    spec:
+      serviceAccountName: shortener
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: consumer
+          image: shortener-consumer:0.1.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: metrics
+              containerPort: 8000
+          env:
+            - name: PGHOST
+              value: pg-cluster-rw
+            - name: PGDATABASE
+              value: shortener
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: pg-app-secret
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pg-app-secret
+                  key: password
+            - name: KAFKA_BOOTSTRAP
+              value: kafka-kafka-bootstrap:9092
+            - name: KAFKA_TOPIC
+              value: clicks
+            - name: KAFKA_GROUP_ID
+              value: clicks-consumer
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

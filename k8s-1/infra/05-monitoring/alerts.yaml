@@ -1,0 +1,54 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: shortener-alerts
+  namespace: shortener
+spec:
+  groups:
+    - name: shortener.rules
+      rules:
+        - alert: ConsumerLagHigh
+          expr: sum(kminion_kafka_consumer_group_topic_lag{group="clicks-consumer"}) > 1000
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Консьюмер кликов отстаёт больше чем на 1000 сообщений"
+
+        - alert: ShortenerHighErrorRate
+          expr: |
+            sum(rate(shortener_requests_total{status=~"5.."}[5m]))
+              / sum(rate(shortener_requests_total[5m])) > 0.05
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Больше 5% ответов API - пятисотки"
+
+        - alert: ShortenerLatencyHigh
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(shortener_request_duration_seconds_bucket{route="/{code}"}[5m])) by (le)
+            ) > 0.2
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "p95 редиректа выше 200 мс"
+
+        - alert: RedisCacheHitRateLow
+          expr: |
+            sum(rate(shortener_cache_hits_total[10m]))
+              / clamp_min(sum(rate(shortener_cache_hits_total[10m])) + sum(rate(shortener_cache_misses_total[10m])), 0.001) < 0.5
+          for: 15m
+          labels:
+            severity: info
+          annotations:
+            summary: "Кэш-хит ниже 50% - Redis почти не помогает"
+
+        - alert: ClickEventsNotPublished
+          expr: increase(shortener_clicks_failed_total[10m]) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: "API не может писать события кликов в Kafka"

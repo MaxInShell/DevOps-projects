@@ -1,0 +1,18 @@
+# Этап 7. Применяется поверх 10-api.yaml и 20-consumer.yaml:
+#   kubectl -n shortener patch deployment shortener-api  --patch-file deploy/50-vault-patch.yaml
+#   kubectl -n shortener patch deployment clicks-consumer --patch-file deploy/50-vault-patch.yaml
+#
+# Vault Agent рендерит /vault/secrets/db.env, entrypoint.sh делает `.` этого файла,
+# и export-ы перекрывают PGUSER/PGPASSWORD из Secret. Креды живут 1 час и ротируются.
+spec:
+  template:
+    metadata:
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "shortener"
+        vault.hashicorp.com/agent-inject-secret-db.env: "database/creds/shortener-role"
+        vault.hashicorp.com/agent-inject-template-db.env: |
+          {{- with secret "database/creds/shortener-role" -}}
+          export PGUSER="{{ .Data.username }}"
+          export PGPASSWORD="{{ .Data.password }}"
+          {{- end }}

@@ -1,0 +1,24 @@
+# k3d cluster create --config cluster/k3d-config.yaml
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: shortener
+servers: 1
+agents: 2
+ports:
+  - port: 8443:443
+    nodeFilters:
+      - loadbalancer
+  - port: 8080:80
+    nodeFilters:
+      - loadbalancer
+options:
+  k3s:
+    extraArgs:
+      # Traefik ставим сами через Helm, чтобы управлять версией и метриками
+      - arg: --disable=traefik
+        nodeFilters:
+          - server:*
+      - arg: --disable=servicelb
+        nodeFilters:
+          - server:*

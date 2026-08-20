@@ -1,0 +1,37 @@
+# Генератор нагрузки: создаёт ссылку и долбит по ней редиректами,
+# чтобы на дашбордах появились красивые линии.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: loadgen
+  namespace: shortener
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: loadgen
+          image: curlimages/curl:8.11.1
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              API=http://shortener-api:8080
+              CODE=$(curl -s -X POST $API/links \
+                -H 'Content-Type: application/json' \
+                -d '{"url":"https://kubernetes.io/docs/concepts/"}' \
+                | sed 's/.*"code":"\([^"]*\)".*/\1/')
+              echo "created code: $CODE"
+              i=0
+              while [ $i -lt 3000 ]; do
+                curl -s -o /dev/null $API/$CODE
+                i=$((i+1))
+              done
+              echo "done, stats:"
+              curl -s $API/links/$CODE/stats
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi

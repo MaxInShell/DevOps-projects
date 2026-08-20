@@ -1,0 +1,24 @@
+# helm upgrade --install vault hashicorp/vault -n vault --create-namespace -f infra/06-vault/values.yaml
+server:
+  # dev-режим: in-memory, root-токен "root", авто-unseal.
+  # Для лабы это осознанный выбор: изучаем secrets engine, а не Raft и unseal.
+  dev:
+    enabled: true
+    devRootToken: "root"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
+injector:
+  enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+ui:
+  enabled: true
+  serviceType: ClusterIP

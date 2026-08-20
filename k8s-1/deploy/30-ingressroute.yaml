@@ -1,0 +1,27 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: shortener
+  namespace: shortener
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    # создание ссылок - под rate limit
+    - match: Host(`links.lab.local`) && PathPrefix(`/links`) && Method(`POST`)
+      kind: Rule
+      middlewares:
+        - name: create-ratelimit
+        - name: security-headers
+      services:
+        - name: shortener-api
+          port: 8080
+    # всё остальное: редиректы и статистика
+    - match: Host(`links.lab.local`)
+      kind: Rule
+      middlewares:
+        - name: security-headers
+      services:
+        - name: shortener-api
+          port: 8080
+  tls: {}

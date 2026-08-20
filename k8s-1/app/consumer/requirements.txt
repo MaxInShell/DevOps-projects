@@ -1,0 +1,3 @@
+psycopg[binary,pool]==3.2.3
+aiokafka==0.12.0
+prometheus-client==0.21.1

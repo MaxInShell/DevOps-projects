@@ -1,0 +1,49 @@
+# kminion отдаёт consumer group lag в Prometheus - это то,
+# на что мы вешаем алерт "консьюмер отстаёт".
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kminion
+  namespace: shortener
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kminion
+  template:
+    metadata:
+      labels:
+        app: kminion
+    spec:
+      containers:
+        - name: kminion
+          image: redpandadata/kminion:v2.2.9
+          env:
+            - name: KAFKA_BROKERS
+              value: kafka-kafka-bootstrap:9092
+            - name: EXPORTER_NAMESPACE
+              value: kminion
+          ports:
+            - name: metrics
+              containerPort: 8080
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 192Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kminion
+  namespace: shortener
+  labels:
+    app: kminion
+spec:
+  selector:
+    app: kminion
+  ports:
+    - name: metrics
+      port: 8080
+      targetPort: metrics

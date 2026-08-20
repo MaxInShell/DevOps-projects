@@ -1,0 +1,43 @@
+# helm upgrade --install traefik traefik/traefik -n traefik --create-namespace -f infra/01-traefik/values.yaml
+deployment:
+  replicas: 1
+
+ingressClass:
+  enabled: true
+  isDefaultClass: true
+
+service:
+  type: LoadBalancer
+
+ports:
+  web:
+    redirectTo:
+      port: websecure
+  websecure:
+    tls:
+      enabled: true
+  metrics:
+    port: 9100
+    expose:
+      default: true
+
+metrics:
+  prometheus:
+    service:
+      enabled: true
+    serviceMonitor:
+      enabled: true
+      namespaceSelector: {}
+
+logs:
+  general:
+    level: INFO
+  access:
+    enabled: true
+
+providers:
+  kubernetesCRD:
+    enabled: true
+    allowCrossNamespace: true
+  kubernetesIngress:
+    enabled: true
